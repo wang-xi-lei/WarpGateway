@@ -20,20 +20,72 @@
 - [x] 配置管理系统
 - [x] 规则匹配引擎
 
-### 阶段 2：Warp.dev API 分析 🔄
+### 阶段 2：Warp.dev API 分析 ✅
 **关键任务：**
-1. **抓包分析 Warp.dev 的 API 请求**
-   - 使用代理拦截所有请求
-   - 记录请求的 URL、Headers、Body
-   - 识别哪些是 AI 服务相关的请求
+1. **抓包分析 Warp.dev 的 API 请求** ✅
+   - ✅ 使用代理拦截所有请求
+   - ✅ 记录请求的 URL、Headers、Body
+   - ✅ 识别哪些是 AI 服务相关的请求
+   - ✅ 域名过滤（只记录 Warp.dev 相关请求）
+   - ✅ 敏感信息脱敏
    
-2. **识别关键请求头**
-   - 查找认证相关的 Header（如 `Authorization`、`X-API-Key` 等）
-   - 记录其他可能重要的 Header
+2. **识别关键请求头** ✅
+   - ✅ 查找认证相关的 Header（如 `Authorization`、`X-API-Key` 等）
+   - ✅ 记录其他可能重要的 Header
+   - ✅ 自动识别认证格式（Bearer Token, Basic Auth 等）
 
-3. **分析请求体结构**
-   - 记录请求体的 JSON 格式
-   - 找出需要替换 Token 的位置
+3. **分析请求体结构** ✅
+   - ✅ 记录请求体的 JSON 格式
+   - ✅ 找出需要替换 Token 的位置
+   - ✅ 提取 JSON Schema
+   - ✅ 识别常见字段
+
+**使用方法：**
+
+1. **启动代理并记录日志：**
+   ```bash
+   # 启动代理（会自动记录日志到 logs/ 目录）
+   python run_gui.py
+   # 或
+   python -m src
+   ```
+
+2. **分析日志文件：**
+   ```bash
+   # 生成 Markdown 报告（默认）
+   python -m src.utils.analyze_logs logs/requests_20231123_120000.jsonl
+   
+   # 生成 JSON 报告
+   python -m src.utils.analyze_logs logs/requests_20231123_120000.jsonl --format json
+   
+   # 控制台输出
+   python -m src.utils.analyze_logs logs/requests_20231123_120000.jsonl --format console
+   
+   # 指定输出文件
+   python -m src.utils.analyze_logs logs/requests_20231123_120000.jsonl -o analysis.md
+   ```
+
+3. **配置分析选项（config.yaml）：**
+   ```yaml
+   analysis:
+     enabled: true  # 启用详细分析日志
+     domains:       # 只记录这些域名的请求
+       - "api.warp.dev"
+       - "app.warp.dev"
+     max_body_size: 1048576  # 请求体最大记录大小（1MB）
+     mask_sensitive: true     # 脱敏敏感信息
+     sensitive_headers:       # 需要脱敏的 Header
+       - "Authorization"
+       - "X-API-Key"
+   ```
+
+**分析报告包含：**
+- 请求摘要（总数、方法分布、域名分布）
+- API 端点列表（路径、方法、请求次数、状态码）
+- 认证 Header 分析（发现的 Header、格式识别）
+- 请求体分析（JSON Schema、常见字段）
+- AI 服务请求识别
+- Token 位置识别（Header 和 Body 中的位置）
 
 ### 阶段 3：Token 管理系统 📝
 **需要实现：**

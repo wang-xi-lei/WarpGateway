@@ -20,13 +20,36 @@
 
 ### 依赖安装
 
+**macOS/Linux（推荐使用虚拟环境）：**
+
+由于 macOS 和部分 Linux 发行版的 Python 环境受系统管理，建议使用虚拟环境：
+
 ```bash
+# 方式 1: 使用安装脚本（推荐）
+./安装依赖.sh
+
+# 方式 2: 手动创建虚拟环境
+python3 -m venv .venv
+source .venv/bin/activate  # macOS/Linux
 pip install -e .
 ```
 
-或安装开发依赖：
+**Windows：**
 
 ```bash
+# 使用虚拟环境（推荐）
+python -m venv .venv
+.venv\Scripts\activate
+pip install -e .
+
+# 或直接安装（如果系统允许）
+pip install -e .
+```
+
+**安装开发依赖：**
+
+```bash
+# 激活虚拟环境后
 pip install -e ".[dev]"
 ```
 
@@ -36,32 +59,58 @@ mitmproxy 需要安装 CA 证书才能拦截 HTTPS 请求。
 
 **自动安装（推荐）：**
 
-Windows 双击运行：`scripts\安装证书.bat`
-
-或命令行：
+- **Windows**: 双击运行 `scripts\安装证书.bat`
+- **macOS/Linux**: 命令行运行：
 ```bash
-python -m src.utils.cert_manager
+python3 -m src.utils.cert_manager
 ```
 
-或在 GUI 中直接点击“一键启动”，会自动检查并安装证书。
+或在 GUI 中直接点击"一键启动"，会自动检查并安装证书。
 
 **手动安装：**
-1. 证书位置：`%USERPROFILE%\.mitmproxy\mitmproxy-ca-cert.cer`
-2. 双击证书文件
-3. 选择“安装证书”
-4. 选择“将所有的证书放入下列存储”
-5. 浏览并选择“受信任的根证书颁发机构”
-6. 点击“完成”
+
+- **Windows**:
+  1. 证书位置：`%USERPROFILE%\.mitmproxy\mitmproxy-ca-cert.cer`
+  2. 双击证书文件
+  3. 选择"安装证书"
+  4. 选择"将所有的证书放入下列存储"
+  5. 浏览并选择"受信任的根证书颁发机构"
+  6. 点击"完成"
+
+- **macOS**:
+  1. 证书位置：`~/.mitmproxy/mitmproxy-ca-cert.pem`
+  2. 双击证书文件，或运行：
+     ```bash
+     open ~/.mitmproxy/mitmproxy-ca-cert.pem
+     ```
+  3. 在"钥匙串访问"中，将证书添加到"系统"钥匙串
+  4. 双击证书，展开"信任"，将"使用此证书时"设置为"始终信任"
 
 ## 使用方法
 
 ### 启动 GUI
 
+**macOS/Linux：**
+
 ```bash
+# 方式 1: 使用启动脚本（自动处理虚拟环境）
+./启动WarpGateway.sh
+
+# 方式 2: 手动启动（需要先激活虚拟环境）
+source .venv/bin/activate
 python run_gui.py
 ```
 
-或 Windows 双击：`启动WarpGateway.bat`
+**Windows：**
+
+```bash
+# 方式 1: 双击启动脚本
+启动WarpGateway.bat
+
+# 方式 2: 命令行启动
+.venv\Scripts\activate
+python run_gui.py
+```
 
 ### 操作步骤
 
@@ -198,6 +247,61 @@ black .
 ruff check .
 ```
 
+## API 分析功能
+
+WarpGateway 提供了强大的 API 分析功能，可以自动分析 Warp.dev 的 API 请求，识别认证方式、Token 位置等信息。
+
+### 使用方法
+
+1. **启动代理并记录日志：**
+   ```bash
+   # 启动代理（会自动记录日志到 logs/ 目录）
+   python run_gui.py
+   ```
+
+2. **分析日志文件：**
+   ```bash
+   # 生成 Markdown 报告（默认）
+   python -m src.utils.analyze_logs logs/requests_20231123_120000.jsonl
+   
+   # 生成 JSON 报告
+   python -m src.utils.analyze_logs logs/requests_20231123_120000.jsonl --format json
+   
+   # 控制台输出
+   python -m src.utils.analyze_logs logs/requests_20231123_120000.jsonl --format console
+   
+   # 指定输出文件
+   python -m src.utils.analyze_logs logs/requests_20231123_120000.jsonl -o analysis.md
+   ```
+
+### 分析报告内容
+
+分析报告包含以下信息：
+
+- **请求摘要**：总请求数、方法分布、域名分布
+- **API 端点列表**：所有发现的 API 端点，包括路径、方法、请求次数、状态码
+- **认证 Header 分析**：自动识别 Authorization、X-API-Key 等认证 Header，识别认证格式
+- **请求体分析**：提取 JSON Schema，识别常见字段（如 token、user_id 等）
+- **AI 服务请求识别**：自动识别 AI 相关的请求（如 `/ai/`, `/multi-agent` 等）
+- **Token 位置识别**：识别 Token 在 Header 和请求体中的位置
+
+### 配置选项
+
+在 `config.yaml` 中可以配置分析选项：
+
+```yaml
+analysis:
+  enabled: true  # 是否启用详细分析日志
+  domains:       # 只记录这些域名的请求
+    - "api.warp.dev"
+    - "app.warp.dev"
+  max_body_size: 1048576  # 请求体最大记录大小（1MB）
+  mask_sensitive: true     # 是否脱敏敏感信息
+  sensitive_headers:       # 需要脱敏的 Header
+    - "Authorization"
+    - "X-API-Key"
+```
+
 ## 命令行工具
 
 ### 证书管理
@@ -230,6 +334,22 @@ python -m src.utils.warp_manager status
 
 ```bash
 python -m src
+```
+
+### API 日志分析
+
+```bash
+# 分析日志文件，生成 Markdown 报告
+python -m src.utils.analyze_logs logs/requests_20231123_120000.jsonl
+
+# 生成 JSON 格式报告
+python -m src.utils.analyze_logs logs/requests_20231123_120000.jsonl --format json
+
+# 控制台输出
+python -m src.utils.analyze_logs logs/requests_20231123_120000.jsonl --format console
+
+# 指定输出文件
+python -m src.utils.analyze_logs logs/requests_20231123_120000.jsonl -o analysis.md
 ```
 
 ## 常见问题

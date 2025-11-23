@@ -382,7 +382,7 @@ class MainWindow(QMainWindow):
         except Exception as e:
             self._log(f'❌ 恢复失败: {e}')
     
-    
+    def _log(self, message: str):
         """添加日志"""
         self.signals.log_message.emit(message)
     

@@ -2,6 +2,7 @@
 
 import yaml
 from pathlib import Path
+from types import SimpleNamespace
 from typing import Dict, List, Any
 
 
@@ -11,6 +12,16 @@ class Config:
     def __init__(self, config_path: str = "config.yaml"):
         self.config_path = Path(config_path)
         self.config = self._load_config()
+        
+        # 创建 proxy 命名空间对象，用于 GUI 代码访问
+        proxy_config = self.config.get("proxy", {})
+        self.proxy = SimpleNamespace(
+            host=proxy_config.get("host", "0.0.0.0"),
+            port=proxy_config.get("port", 8080),
+            upstream=proxy_config.get("upstream", ""),
+            cert_dir="~/.mitmproxy",  # 默认证书目录
+            ssl_insecure=proxy_config.get("ssl_insecure", False),
+        )
 
     def _load_config(self) -> Dict[str, Any]:
         """加载配置文件"""
@@ -87,3 +98,28 @@ class Config:
                 return route.get("upstream", "")
         # 返回默认上游代理
         return self.upstream
+    
+    @property
+    def analysis_enabled(self) -> bool:
+        """是否启用详细分析日志"""
+        return self.config.get("analysis", {}).get("enabled", True)
+    
+    @property
+    def analysis_domains(self) -> List[str]:
+        """分析域名列表"""
+        return self.config.get("analysis", {}).get("domains", ["api.warp.dev", "app.warp.dev"])
+    
+    @property
+    def analysis_max_body_size(self) -> int:
+        """请求体最大记录大小（字节）"""
+        return self.config.get("analysis", {}).get("max_body_size", 1048576)
+    
+    @property
+    def analysis_mask_sensitive(self) -> bool:
+        """是否脱敏敏感信息"""
+        return self.config.get("analysis", {}).get("mask_sensitive", True)
+    
+    @property
+    def analysis_sensitive_headers(self) -> List[str]:
+        """需要脱敏的 Header 列表"""
+        return self.config.get("analysis", {}).get("sensitive_headers", ["Authorization", "X-API-Key"])

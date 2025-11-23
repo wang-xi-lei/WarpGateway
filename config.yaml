@@ -6,12 +6,13 @@ proxy:
   # 代理端口
   port: 8080
   # 默认上游代理（所有请求都走，可留空）
-  upstream: ""
-  # 条件路由：特定 URL 走上游代理
+  # 配置为 Clash VPN 代理（端口 7890）
+  upstream: "http://127.0.0.1:7890"
+  # 条件路由：特定 URL 走上游代理（如果 upstream 已设置，此项通常不需要）
   upstream_routes:
-    # Firebase token 刷新接口走 7897 代理
-    - pattern: "securetoken.googleapis.com"  # 匹配 Firebase token API
-      upstream: "http://127.0.0.1:7897"
+    # 如果需要特定域名走不同的代理，可以在这里配置
+    # - pattern: "example.com"
+    #   upstream: "http://127.0.0.1:其他端口"
     # 可添加更多路由
   # 是否启用 SSL 拦截
   ssl_insecure: false
@@ -51,3 +52,23 @@ logging:
   file: "warp_gateway.log"
   # 是否输出到控制台
   console: true
+
+# API 分析配置
+analysis:
+  # 是否启用详细分析日志
+  enabled: true
+  # Warp.dev 相关域名列表（只记录这些域名的请求）
+  domains:
+    - "api.warp.dev"
+    - "app.warp.dev"
+    - "warp.dev"
+  # 请求体最大记录大小（字节，默认 1MB）
+  max_body_size: 1048576
+  # 是否脱敏敏感信息
+  mask_sensitive: true
+  # 需要脱敏的 Header 列表
+  sensitive_headers:
+    - "Authorization"
+    - "X-API-Key"
+    - "X-Auth-Token"
+    - "Cookie"

@@ -57,7 +57,7 @@ class ProxyServer:
         self.chain.add(ai_monitor)
         
         # 添加日志处理器
-        logger_handler = LoggerHandler("logs")
+        logger_handler = LoggerHandler("logs", self.config)
         self.chain.add(logger_handler)
         
         # 添加统计处理器
@@ -113,6 +113,10 @@ def main():
     logger.info("=" * 60)
     logger.info("🚀 WarpGateway Starting...")
     logger.info(f"📍 Proxy Address: {host}:{port}")
+    if config.upstream:
+        logger.info(f"🔗 Upstream Proxy: {config.upstream}")
+    else:
+        logger.info("🔗 Upstream Proxy: None (direct connection)")
     logger.info(f"📋 Config File: {Path(args.config).absolute()}")
     logger.info(f"🚫 Block Rules: {len(config.block_rules)} patterns")
     logger.info(f"✅ Allow Rules: {len(config.allow_rules)} patterns")
@@ -139,6 +143,10 @@ def main():
             "--listen-port", str(port),
             "--set", "confdir=~/.mitmproxy",
         ]
+        
+        # 配置上游代理
+        if config.upstream:
+            mitmdump_args.extend(["--mode", f"upstream:{config.upstream}"])
         
         if config.ssl_insecure:
             mitmdump_args.append("--ssl-insecure")

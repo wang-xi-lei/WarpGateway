@@ -120,8 +120,14 @@ def get_warp_path() -> Path:
     
     # 2) 环境变量
     env_path = os.environ.get('WARP_PATH')
-    if env_path and Path(env_path).exists():
-        return Path(env_path)
+    if env_path:
+        env_path_obj = Path(env_path)
+        # macOS: 如果是 .app 路径，直接返回
+        if env_path_obj.suffix == '.app' and env_path_obj.exists():
+            return env_path_obj
+        # 其他情况检查可执行文件
+        if env_path_obj.exists():
+            return env_path_obj
 
     # 3) 注册表 (Windows)
     reg_path = _query_registry_for_warp()
@@ -133,8 +139,15 @@ def get_warp_path() -> Path:
         # Windows 默认路径
         warp_path = Path.home() / 'AppData' / 'Local' / 'Programs' / 'Warp' / 'warp.exe'
     elif sys.platform == 'darwin':
-        # macOS 默认路径
-        warp_path = Path('/Applications/Warp.app/Contents/MacOS/Warp')
+        # macOS 默认路径：优先使用 .app 包
+        warp_path = Path('/Applications/Warp.app')
+        # 如果 .app 不存在，尝试可执行文件路径（用于兼容性检查）
+        if not warp_path.exists():
+            exe_path = Path('/Applications/Warp.app/Contents/MacOS/Warp')
+            if exe_path.exists():
+                # 如果可执行文件存在但 .app 不存在，可能是路径问题
+                # 返回可执行文件路径，launch_warp 会处理
+                return exe_path
     else:
         # Linux 默认路径
         warp_path = Path.home() / '.local' / 'share' / 'warp-terminal' / 'warp'
@@ -207,14 +220,48 @@ def launch_warp():
     
     try:
         if sys.platform == 'win32':
+            # Windows: 直接执行可执行文件
             subprocess.Popen([str(warp_path)], shell=False)
+        elif sys.platform == 'darwin':
+            # macOS: 需要转换为 .app 路径并使用 open 命令
+            app_path = None
+            
+            # 如果已经是 .app 路径
+            if warp_path.suffix == '.app':
+                app_path = warp_path
+            # 如果是可执行文件路径，向上查找 .app
+            elif 'Warp.app' in str(warp_path) or 'Contents/MacOS' in str(warp_path):
+                current = warp_path
+                # 向上查找 .app 目录
+                for _ in range(4):  # 最多向上查找4层
+                    if current.suffix == '.app':
+                        app_path = current
+                        break
+                    current = current.parent
+                    if not current or current == current.parent:  # 到达根目录
+                        break
+                
+                # 如果没找到，使用默认路径
+                if not app_path:
+                    app_path = Path('/Applications/Warp.app')
+            
+            # 使用 open 命令启动 .app
+            if app_path and app_path.exists():
+                subprocess.Popen(['open', str(app_path)])
+                logger.info(f"✅ Warp 已启动: {app_path}")
+            else:
+                # 回退：尝试直接执行可执行文件
+                logger.warning(f"⚠️ 未找到 .app 路径，尝试直接执行: {warp_path}")
+                subprocess.Popen([str(warp_path)])
+                logger.info(f"✅ Warp 已启动: {warp_path}")
         else:
+            # Linux: 直接执行可执行文件
             subprocess.Popen([str(warp_path)])
+            logger.info(f"✅ Warp 已启动: {warp_path}")
         
-        logger.info(f"✅ Warp 已启动: {warp_path}")
         return True
     except Exception as e:
-        logger.error(f"❌ 启动 Warp 失败: {e}")
+        logger.error(f"❌ 启动 Warp 失败: {e}", exc_info=True)
         return False
 
 

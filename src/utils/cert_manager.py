@@ -133,8 +133,25 @@ def check_cert_installed():
         except Exception as e:
             logger.error(f"证书检查失败: {e}")
             return False
+    elif sys.platform == 'darwin':
+        # macOS: 检查证书是否在系统钥匙串中
+        try:
+            result = subprocess.run(
+                ['security', 'find-certificate', '-c', 'mitmproxy', '-a', '/Library/Keychains/System.keychain'],
+                capture_output=True,
+                text=True,
+                timeout=5
+            )
+            return result.returncode == 0
+        except subprocess.TimeoutExpired:
+            logger.warning("证书检查超时")
+            return False
+        except Exception as e:
+            logger.error(f"证书检查失败: {e}")
+            return False
     
-    return False
+    # Linux 和其他系统：只检查证书文件是否存在
+    return cert_file.exists()
 
 
 def generate_cert():
